@@ -81,7 +81,7 @@ const trustStats = [
       subtitle="UK Energy Efficiency Schemes"
       description="Millions of UK households qualify for free insulation, heating upgrades, and bill discounts. Check your eligibility in under 2 minutes."
       cta-text="Check My Eligibility"
-      cta-link="/eligibility"
+      cta-link="/checker"
       secondary-cta-text="Learn How It Works"
       secondary-cta-link="/how-it-works"
       variant="green"
@@ -187,7 +187,7 @@ const trustStats = [
                 Most households can save hundreds or even thousands of pounds on energy efficiency improvements. Find out what you qualify for today.
               </p>
               <NuxtLink
-                to="/eligibility"
+                to="/checker"
                 class="w-full inline-flex items-center justify-center px-6 py-4 bg-primary-700 text-white font-semibold rounded-xl hover:bg-primary-800 transition-colors"
               >
                 Start Eligibility Check
@@ -242,7 +242,7 @@ const trustStats = [
           Thousands of UK households are claiming their energy grants right now. Check if you qualify and start saving on your energy bills.
         </p>
         <NuxtLink
-          to="/eligibility"
+          to="/checker"
           class="inline-flex items-center px-8 py-4 bg-white text-primary-700 font-semibold rounded-xl hover:bg-primary-50 transition-colors shadow-lg text-lg"
         >
           Check My Eligibility Now
