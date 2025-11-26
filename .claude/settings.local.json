@@ -24,7 +24,10 @@
       "mcp__vercel-mcp__list_projects",
       "mcp__vercel-mcp__list_deployments",
       "mcp__vercel-mcp__get_deployment_build_logs",
-      "Bash(npx vue-tsc:*)"
+      "Bash(npx vue-tsc:*)",
+      "mcp__supabase-mcp__list_projects",
+      "mcp__supabase-mcp__apply_migration",
+      "mcp__supabase-mcp__generate_typescript_types"
     ],
     "deny": [],
     "ask": []
