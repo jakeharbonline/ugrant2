@@ -41,7 +41,7 @@ const resultTier = computed(() => {
     'potentially_eligible': 'potentially-eligible',
     'not_eligible': 'not-eligible',
   }
-  return tierMap[eligibilityResult.value.overallTier]
+  return tierMap[eligibilityResult.value.overallTier] ?? 'not-eligible'
 })
 
 // Format schemes for ResultsCard

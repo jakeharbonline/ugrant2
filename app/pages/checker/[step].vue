@@ -90,12 +90,12 @@ const heatingTypeValue = computed({
 })
 
 const insulationValue = computed({
-  get: () => answers.value.insulation,
+  get: () => [...answers.value.insulation],
   set: (value: string[]) => setAnswer('insulation', value),
 })
 
 const benefitsValue = computed({
-  get: () => answers.value.benefits,
+  get: () => [...answers.value.benefits],
   set: (value: string[]) => setAnswer('benefits', value),
 })
 
