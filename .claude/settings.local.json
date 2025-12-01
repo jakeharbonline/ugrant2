@@ -27,7 +27,8 @@
       "Bash(npx vue-tsc:*)",
       "mcp__supabase-mcp__list_projects",
       "mcp__supabase-mcp__apply_migration",
-      "mcp__supabase-mcp__generate_typescript_types"
+      "mcp__supabase-mcp__generate_typescript_types",
+      "mcp__vercel-mcp__get_deployment"
     ],
     "deny": [],
     "ask": []

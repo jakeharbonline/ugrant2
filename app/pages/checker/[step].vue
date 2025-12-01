@@ -294,7 +294,7 @@ function handleEpcSelected(certificate: EpcCertificate) {
         <div class="mb-8">
           <!-- Postcode Input -->
           <template v-if="stepConfig.inputType === 'postcode'">
-            <PostcodeInput
+            <CheckerPostcodeInput
               v-model="postcodeValue"
               v-model:house-number="houseNumberValue"
               :error="firstError"
@@ -323,7 +323,7 @@ function handleEpcSelected(certificate: EpcCertificate) {
 
           <!-- Property Type Radio -->
           <template v-else-if="stepConfig.slug === 'property-type'">
-            <RadioGroup
+            <CheckerRadioGroup
               v-model="propertyTypeValue"
               :options="stepConfig.options ?? []"
               name="property-type"
@@ -334,7 +334,7 @@ function handleEpcSelected(certificate: EpcCertificate) {
 
           <!-- Tenure Radio -->
           <template v-else-if="stepConfig.slug === 'tenure'">
-            <RadioGroup
+            <CheckerRadioGroup
               v-model="tenureValue"
               :options="stepConfig.options ?? []"
               name="tenure"
@@ -345,7 +345,7 @@ function handleEpcSelected(certificate: EpcCertificate) {
 
           <!-- Heating Type Radio -->
           <template v-else-if="stepConfig.slug === 'heating'">
-            <RadioGroup
+            <CheckerRadioGroup
               v-model="heatingTypeValue"
               :options="stepConfig.options ?? []"
               name="heating"
@@ -356,7 +356,7 @@ function handleEpcSelected(certificate: EpcCertificate) {
 
           <!-- Insulation Checkbox -->
           <template v-else-if="stepConfig.slug === 'insulation'">
-            <CheckboxGroup
+            <CheckerCheckboxGroup
               v-model="insulationValue"
               :options="stepConfig.options ?? []"
               name="insulation"
@@ -367,7 +367,7 @@ function handleEpcSelected(certificate: EpcCertificate) {
 
           <!-- Benefits Checkbox -->
           <template v-else-if="stepConfig.slug === 'benefits'">
-            <CheckboxGroup
+            <CheckerCheckboxGroup
               v-model="benefitsValue"
               :options="stepConfig.options ?? []"
               name="benefits"
@@ -378,7 +378,7 @@ function handleEpcSelected(certificate: EpcCertificate) {
 
           <!-- Income Radio -->
           <template v-else-if="stepConfig.slug === 'income'">
-            <RadioGroup
+            <CheckerRadioGroup
               v-model="incomeBandValue"
               :options="stepConfig.options ?? []"
               name="income"
@@ -389,7 +389,7 @@ function handleEpcSelected(certificate: EpcCertificate) {
 
           <!-- EPC Selector -->
           <template v-else-if="stepConfig.inputType === 'epc'">
-            <EpcSelector
+            <CheckerEpcSelector
               v-model="epcRatingValue"
               :error="firstError"
               :help-text="stepConfig.helpText"
@@ -398,7 +398,7 @@ function handleEpcSelected(certificate: EpcCertificate) {
 
           <!-- Contact Fields -->
           <template v-else-if="stepConfig.inputType === 'contact'">
-            <ContactFields
+            <CheckerContactFields
               v-model:wants-contact="wantsInstallerContactValue"
               v-model:email="emailValue"
               v-model:phone="phoneValue"
@@ -409,7 +409,7 @@ function handleEpcSelected(certificate: EpcCertificate) {
 
           <!-- Confirmation Step -->
           <template v-else-if="stepConfig.inputType === 'confirm'">
-            <ConfirmationStep
+            <CheckerConfirmationStep
               v-model:accept-terms="acceptTermsValue"
               v-model:accept-privacy="acceptPrivacyValue"
               :terms-error="termsError"

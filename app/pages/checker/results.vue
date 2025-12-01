@@ -123,7 +123,7 @@ function handleGoHome() {
         </div>
 
         <!-- Results card -->
-        <ResultsCard
+        <CheckerResultsCard
           :tier="resultTier"
           :schemes="formattedSchemes"
           :wants-installer-contact="answers.wantsInstallerContact"
