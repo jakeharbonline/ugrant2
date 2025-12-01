@@ -23,8 +23,15 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
+    // Server-only (private) keys
+    epcApiEmail: process.env.EPC_API_EMAIL || '',
+    epcApiKey: process.env.EPC_API_KEY || '',
+    stripeSecretKey: process.env.STRIPE_SECRET_KEY || '',
+    stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
+
     public: {
-      baseUrl: process.env.BASE_URL || 'http://localhost:3000'
+      baseUrl: process.env.BASE_URL || 'http://localhost:3000',
+      stripePublicKey: process.env.STRIPE_PUBLIC_KEY || '',
     }
   }
 })

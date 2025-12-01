@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import type { EligibilityTier } from '~/components/checker/ResultsCard.vue'
-
 useHead({
   title: 'Your Eligibility Results - uGrant',
 })
@@ -11,6 +9,13 @@ useSeoMeta({
 })
 
 const { answers, hasHydrated, initialize, clearAnswers } = useCheckerState()
+const { evaluate } = useEligibility()
+const { createLead, loading: savingLead } = useLead()
+
+// Track if lead has been saved
+const leadSaved = ref(false)
+const leadId = ref<string | null>(null)
+const saveError = ref<string | null>(null)
 
 // Initialize state from localStorage on client
 onMounted(() => {
@@ -24,102 +29,55 @@ watch(hasHydrated, (hydrated) => {
   }
 }, { immediate: true })
 
-/**
- * Mock eligibility calculation
- * In production, this would call an API or use more sophisticated logic
- */
-interface SchemeResult {
-  name: string
-  description: string
-  potentialSavings?: string
-  link: string
-}
-
+// Calculate eligibility using the real engine
 const eligibilityResult = computed(() => {
-  const data = answers.value
-
-  // Determine eligibility tier based on answers
-  let tier: EligibilityTier = 'not-eligible'
-  const schemes: SchemeResult[] = []
-
-  // Check for strong eligibility indicators
-  const hasQualifyingBenefit = data.benefits.some((b: string) =>
-    ['universal-credit', 'pension-credit', 'income-support', 'jsa-income', 'esa-income'].includes(b)
-  )
-
-  const hasTaxCreditWithLowIncome = data.benefits.some((b: string) =>
-    ['child-tax-credit', 'working-tax-credit', 'child-benefit'].includes(b)
-  ) && data.incomeBand === 'under-31k'
-
-  const hasPoorEpc = ['D', 'E', 'F', 'G', 'unknown'].includes(data.epcRating)
-  const hasInefficientHeating = ['oil-boiler', 'lpg-boiler', 'coal', 'electric-storage', 'electric-panel', 'none'].includes(data.heatingType)
-  const needsInsulation = !data.insulation.includes('cavity-wall') || !data.insulation.includes('loft-full')
-  const isLowIncome = data.incomeBand === 'under-31k'
-
-  // ECO4 eligibility (benefit-based)
-  if (hasQualifyingBenefit || hasTaxCreditWithLowIncome) {
-    tier = 'eligible'
-    schemes.push({
-      name: 'ECO4',
-      description: 'The main government energy efficiency scheme providing free insulation and heating upgrades.',
-      potentialSavings: '£10,000',
-      link: '/schemes/eco4',
-    })
-  }
-
-  // GBIS eligibility (EPC-based, no benefits required)
-  if (hasPoorEpc && needsInsulation) {
-    if (tier !== 'eligible') tier = 'potentially-eligible'
-    schemes.push({
-      name: 'Great British Insulation Scheme (GBIS)',
-      description: 'Cavity wall and loft insulation for properties with poor energy ratings.',
-      potentialSavings: '£4,000',
-      link: '/schemes/gbis',
-    })
-  }
-
-  // LA Flex (Local Authority Flex) - for vulnerable households
-  if (isLowIncome && (hasPoorEpc || hasInefficientHeating)) {
-    if (tier !== 'eligible') tier = 'potentially-eligible'
-    const hasLaFlex = schemes.some((s) => s.name.includes('LA Flex'))
-    if (!hasLaFlex) {
-      schemes.push({
-        name: 'LA Flex',
-        description: 'Local authority scheme for fuel-poor households not on qualifying benefits.',
-        potentialSavings: '£10,000',
-        link: '/schemes/la-flex',
-      })
-    }
-  }
-
-  // Warm Home Discount
-  if (hasQualifyingBenefit && data.incomeBand !== 'over-40k') {
-    if (tier !== 'eligible') tier = 'potentially-eligible'
-    schemes.push({
-      name: 'Warm Home Discount',
-      description: 'A £150 discount on your electricity bill each winter.',
-      potentialSavings: '£150',
-      link: '/schemes/warm-home-discount',
-    })
-  }
-
-  // Boiler Upgrade Scheme (for owner-occupiers replacing fossil fuel heating)
-  if (data.tenure === 'owner-occupied' && hasInefficientHeating && data.heatingType !== 'heat-pump') {
-    if (tier !== 'eligible') tier = 'potentially-eligible'
-    schemes.push({
-      name: 'Boiler Upgrade Scheme',
-      description: 'Grants up to £7,500 towards heat pumps to replace your current heating system.',
-      potentialSavings: '£7,500',
-      link: '/schemes/boiler-upgrade-scheme',
-    })
-  }
-
-  return {
-    tier,
-    schemes,
-    wantsInstallerContact: data.wantsInstallerContact,
-  }
+  return evaluate(answers.value)
 })
+
+// Map eligibility tier for the ResultsCard component
+const resultTier = computed(() => {
+  const tierMap: Record<string, 'eligible' | 'potentially-eligible' | 'not-eligible'> = {
+    'eligible': 'eligible',
+    'potentially_eligible': 'potentially-eligible',
+    'not_eligible': 'not-eligible',
+  }
+  return tierMap[eligibilityResult.value.overallTier]
+})
+
+// Format schemes for ResultsCard
+const formattedSchemes = computed(() => {
+  return eligibilityResult.value.schemes
+    .filter((s: { tier: string }) => s.tier === 'eligible' || s.tier === 'potentially_eligible')
+    .map((scheme: { name: string; reasons: string[]; maxGrant?: number; slug: string }) => ({
+      name: scheme.name,
+      description: scheme.reasons.join(' '),
+      potentialSavings: scheme.maxGrant ? `£${scheme.maxGrant.toLocaleString()}` : undefined,
+      link: `/schemes/${scheme.slug}`,
+    }))
+})
+
+// Save lead to database when results are shown (if eligible and opted for contact)
+watch([hasHydrated, eligibilityResult], async ([hydrated, result]) => {
+  if (!hydrated || leadSaved.value || savingLead.value) return
+
+  // Only save leads that are eligible or potentially eligible
+  if (result.overallTier === 'not_eligible') {
+    leadSaved.value = true // Mark as "saved" to prevent retries
+    return
+  }
+
+  // Save the lead
+  const { success, leadId: newLeadId, error } = await createLead(answers.value, result)
+
+  if (success && newLeadId) {
+    leadSaved.value = true
+    leadId.value = newLeadId
+    console.log('Lead saved:', newLeadId)
+  } else {
+    saveError.value = error || 'Failed to save results'
+    console.error('Failed to save lead:', error)
+  }
+}, { immediate: true })
 
 function handleRestart() {
   clearAnswers()
@@ -166,10 +124,46 @@ function handleGoHome() {
 
         <!-- Results card -->
         <ResultsCard
-          :tier="eligibilityResult.tier"
-          :schemes="eligibilityResult.schemes"
-          :wants-installer-contact="eligibilityResult.wantsInstallerContact"
+          :tier="resultTier"
+          :schemes="formattedSchemes"
+          :wants-installer-contact="answers.wantsInstallerContact"
         />
+
+        <!-- Lead saved confirmation -->
+        <div
+          v-if="leadSaved && answers.wantsInstallerContact && resultTier !== 'not-eligible'"
+          class="mt-6 p-4 bg-primary-50 border border-primary-200 rounded-xl"
+        >
+          <div class="flex items-start gap-3">
+            <svg class="w-6 h-6 text-primary-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <p class="font-medium text-primary-900">Your details have been saved</p>
+              <p class="text-sm text-primary-700 mt-1">
+                An approved installer will be in touch soon to discuss your options and verify your eligibility.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Error saving lead -->
+        <div
+          v-if="saveError"
+          class="mt-6 p-4 bg-red-50 border border-red-200 rounded-xl"
+        >
+          <div class="flex items-start gap-3">
+            <svg class="w-6 h-6 text-red-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div>
+              <p class="font-medium text-red-900">There was a problem saving your details</p>
+              <p class="text-sm text-red-700 mt-1">
+                Please try again later or contact us directly.
+              </p>
+            </div>
+          </div>
+        </div>
 
         <!-- Actions -->
         <div class="mt-8 flex flex-col sm:flex-row gap-4 justify-center">

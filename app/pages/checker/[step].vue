@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { CheckerAnswers } from '~/composables/useCheckerState'
+import type { EpcCertificate } from '~/composables/useEpcLookup'
 import {
   getStepBySlug,
   getNextStepSlug,
@@ -43,11 +44,15 @@ useHead({
 const {
   answers,
   setAnswer,
+  setAnswers,
   validateStep,
   initialize,
   totalSteps,
   hasHydrated,
 } = useCheckerState()
+
+// EPC lookup utilities for mapping data
+const { parseInsulation, mapPropertyType, mapHeatingType } = useEpcLookup()
 
 // Initialize state from localStorage on client
 onMounted(() => {
@@ -192,6 +197,66 @@ async function handleNext() {
 watch(stepSlug, () => {
   errors.value = []
 })
+
+// Track if we've auto-filled from EPC
+const epcAutoFilled = ref(false)
+
+// Handle EPC selection from postcode lookup
+function handleEpcSelected(certificate: EpcCertificate) {
+  // Map EPC data to our answer format
+  const mappedPropertyType = mapPropertyType(certificate.propertyType)
+  const mappedHeatingType = mapHeatingType(certificate.mainHeatDescription, certificate.mainFuel)
+  const mappedInsulation = parseInsulation(certificate)
+
+  // Prepare updates
+  const updates: Partial<CheckerAnswers> = {
+    epcRating: certificate.currentEnergyRating,
+    heatingType: mappedHeatingType,
+  }
+
+  // Map property type to our options
+  const propertyTypeMap: Record<string, string> = {
+    'house': 'detached-house', // Default to detached, will be refined
+    'flat': 'flat-purpose',
+    'bungalow': 'bungalow',
+    'maisonette': 'maisonette',
+    'park-home': 'detached-house', // Closest match
+  }
+
+  // Try to get more specific property type from built form
+  const builtForm = certificate.builtForm.toLowerCase()
+  if (builtForm.includes('detached')) {
+    updates.propertyType = 'detached-house'
+  } else if (builtForm.includes('semi')) {
+    updates.propertyType = 'semi-detached'
+  } else if (builtForm.includes('end-terrace')) {
+    updates.propertyType = 'end-terrace'
+  } else if (builtForm.includes('terrace') || builtForm.includes('mid-terrace')) {
+    updates.propertyType = 'terraced'
+  } else if (mappedPropertyType === 'flat') {
+    // Check if converted or purpose built
+    if (certificate.propertyType.toLowerCase().includes('converted')) {
+      updates.propertyType = 'flat-converted'
+    } else {
+      updates.propertyType = 'flat-purpose'
+    }
+  } else if (mappedPropertyType === 'bungalow') {
+    updates.propertyType = 'bungalow'
+  } else if (mappedPropertyType === 'maisonette') {
+    updates.propertyType = 'maisonette'
+  } else {
+    updates.propertyType = propertyTypeMap[mappedPropertyType] || 'detached-house'
+  }
+
+  // Set insulation if we found any
+  if (mappedInsulation.length > 0) {
+    updates.insulation = mappedInsulation
+  }
+
+  // Apply all updates at once
+  setAnswers(updates)
+  epcAutoFilled.value = true
+}
 </script>
 
 <template>
@@ -228,7 +293,26 @@ watch(stepSlug, () => {
               v-model="postcodeValue"
               :error="firstError"
               :help-text="stepConfig.helpText"
+              @epc-selected="handleEpcSelected"
             />
+
+            <!-- Auto-fill success message -->
+            <div
+              v-if="epcAutoFilled"
+              class="mt-4 p-4 bg-green-50 border border-green-200 rounded-xl"
+            >
+              <div class="flex items-start gap-3">
+                <svg class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <p class="font-medium text-green-900 text-sm">Property details auto-filled</p>
+                  <p class="text-xs text-green-700 mt-1">
+                    We've pre-filled your property type, heating, insulation, and EPC rating from your certificate. You can review and change these on the following steps.
+                  </p>
+                </div>
+              </div>
+            </div>
           </template>
 
           <!-- Property Type Radio -->
