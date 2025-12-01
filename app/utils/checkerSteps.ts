@@ -37,9 +37,8 @@ export const CHECKER_STEPS: StepConfig[] = [
   {
     number: 1,
     slug: 'postcode',
-    title: 'What is your postcode?',
-    subtitle: 'We need this to check which schemes are available in your area',
-    helpText: 'Enter a valid UK postcode (e.g., SW1A 1AA)',
+    title: 'Where is your property?',
+    subtitle: 'We\'ll look up your property details to speed things up',
     inputType: 'postcode',
     answerKey: 'postcode',
   },

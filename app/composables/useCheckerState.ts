@@ -5,6 +5,7 @@
 import { ref, readonly } from 'vue'
 
 export interface CheckerAnswers {
+  houseNumber: string
   postcode: string
   propertyType: string
   tenure: string
@@ -30,6 +31,7 @@ const TOTAL_STEPS = 10
 
 // Default empty state
 const defaultAnswers: CheckerAnswers = {
+  houseNumber: '',
   postcode: '',
   propertyType: '',
   tenure: '',
@@ -154,6 +156,9 @@ export function useCheckerState() {
 
     switch (stepSlug) {
       case 'postcode':
+        if (!answers.value.houseNumber.trim()) {
+          errors.push('Please enter your house number or name')
+        }
         if (!answers.value.postcode.trim()) {
           errors.push('Please enter your postcode')
         } else if (!isValidPostcode(answers.value.postcode)) {

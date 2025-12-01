@@ -64,6 +64,11 @@ const errors = ref<string[]>([])
 const isSubmitting = ref(false)
 
 // Computed answer values for two-way binding
+const houseNumberValue = computed({
+  get: () => answers.value.houseNumber,
+  set: (value: string) => setAnswer('houseNumber', value),
+})
+
 const postcodeValue = computed({
   get: () => answers.value.postcode,
   set: (value: string) => setAnswer('postcode', value),
@@ -291,6 +296,7 @@ function handleEpcSelected(certificate: EpcCertificate) {
           <template v-if="stepConfig.inputType === 'postcode'">
             <PostcodeInput
               v-model="postcodeValue"
+              v-model:house-number="houseNumberValue"
               :error="firstError"
               :help-text="stepConfig.helpText"
               @epc-selected="handleEpcSelected"
