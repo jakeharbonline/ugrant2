@@ -60,11 +60,11 @@ export function useLead() {
         property_type: answers.propertyType,
         tenure: answers.tenure,
         heating_type: answers.heatingType,
-        insulation: answers.insulation,
+        insulation: [...answers.insulation],
         epc_rating: answers.epcRating || null,
 
         // Financial info
-        benefits: answers.benefits,
+        benefits: [...answers.benefits],
         income_band: answers.incomeBand,
 
         // Eligibility results
