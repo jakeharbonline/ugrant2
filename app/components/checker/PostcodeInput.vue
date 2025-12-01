@@ -88,19 +88,35 @@ const canLookup = computed(() => {
 function findBestMatch(certs: EpcCertificate[], houseNum: string): EpcCertificate | null {
   const searchTerm = houseNum.toLowerCase().trim()
 
-  // Try exact match at start of address
-  for (const cert of certs) {
-    const address = cert.address.toLowerCase()
-    // Check if address starts with the house number
-    if (address.startsWith(searchTerm + ' ') ||
-        address.startsWith(searchTerm + ',') ||
-        address.startsWith('flat ' + searchTerm) ||
-        address.startsWith(searchTerm + '/')) {
-      return cert
-    }
+  // Escape special regex characters
+  const escapedTerm = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+  // Create regex that matches the house number as a word boundary
+  // This handles: "42 HIGH ST", "42, HIGH ST", "FLAT 1, 42 HIGH ST", etc.
+  const regex = new RegExp(`(^|[,\\s])${escapedTerm}([,\\s]|$)`, 'i')
+
+  // First pass: find addresses containing the house number
+  const matches = certs.filter(cert => regex.test(cert.address))
+
+  if (matches.length === 1 && matches[0]) {
+    return matches[0]
   }
 
-  // Try contains match
+  if (matches.length > 1) {
+    // Multiple matches - try to find best one
+    // Prefer addresses that START with the house number
+    for (const cert of matches) {
+      const address = cert.address.toLowerCase()
+      if (address.startsWith(searchTerm + ' ') ||
+          address.startsWith(searchTerm + ',')) {
+        return cert
+      }
+    }
+    // Return first match if no better option
+    return matches[0] ?? null
+  }
+
+  // No regex matches - try exact word match in parts
   for (const cert of certs) {
     const address = cert.address.toLowerCase()
     const parts = address.split(/[\s,]+/)
