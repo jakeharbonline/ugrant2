@@ -10,8 +10,8 @@ export interface CheckerAnswers {
   propertyType: string
   tenure: string
   heatingType: string
-  insulation: string[]
-  benefits: string[]
+  insulation: readonly string[]
+  benefits: readonly string[]
   incomeBand: string
   epcRating: string
   email: string
