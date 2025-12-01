@@ -103,7 +103,7 @@ export default defineEventHandler(async (event) => {
       mainHeatDescription: row[getColumnIndex('mainheat-description')] || '',
       mainFuel: row[getColumnIndex('main-fuel')] || '',
       hotWaterDescription: row[getColumnIndex('hotwater-description')] || '',
-      floorArea: parseFloat(row[getColumnIndex('total-floor-area')]) || 0,
+      floorArea: parseFloat(row[getColumnIndex('total-floor-area')] ?? '0') || 0,
       lodgementDate: row[getColumnIndex('lodgement-date')] || '',
       certificateHash: row[getColumnIndex('lmk-key')] || '',
     }))

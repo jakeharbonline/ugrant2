@@ -151,11 +151,12 @@ async function handleLookup() {
     lookupStatus.value = 'success'
     matchedCertificate.value = match
     emit('epc-selected', match)
-  } else if (result.certificates.length === 1) {
+  } else if (result.certificates.length === 1 && result.certificates[0]) {
     // Only one result - use it
+    const cert = result.certificates[0]
     lookupStatus.value = 'success'
-    matchedCertificate.value = result.certificates[0]
-    emit('epc-selected', result.certificates[0])
+    matchedCertificate.value = cert
+    emit('epc-selected', cert)
   } else {
     // Multiple results, no exact match - show selector
     lookupStatus.value = 'success'

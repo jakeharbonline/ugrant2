@@ -5,6 +5,9 @@
 
 import type { CheckerAnswers } from './useCheckerState'
 
+// ReadonlyCheckerAnswers accepts both mutable and readonly versions
+type ReadonlyCheckerAnswers = Readonly<CheckerAnswers> | CheckerAnswers
+
 export type EligibilityTier = 'eligible' | 'potentially_eligible' | 'not_eligible'
 
 export interface SchemeEligibility {
@@ -40,7 +43,7 @@ export function useEligibility() {
   /**
    * Check ECO4 eligibility
    */
-  function checkEco4(answers: CheckerAnswers): SchemeEligibility {
+  function checkEco4(answers: ReadonlyCheckerAnswers): SchemeEligibility {
     const reasons: string[] = []
     let tier: EligibilityTier = 'not_eligible'
 
@@ -92,7 +95,7 @@ export function useEligibility() {
   /**
    * Check GBIS (Great British Insulation Scheme) eligibility
    */
-  function checkGbis(answers: CheckerAnswers): SchemeEligibility {
+  function checkGbis(answers: ReadonlyCheckerAnswers): SchemeEligibility {
     const reasons: string[] = []
     let tier: EligibilityTier = 'not_eligible'
 
@@ -134,7 +137,7 @@ export function useEligibility() {
   /**
    * Check Warm Home Discount eligibility
    */
-  function checkWarmHomeDiscount(answers: CheckerAnswers): SchemeEligibility {
+  function checkWarmHomeDiscount(answers: ReadonlyCheckerAnswers): SchemeEligibility {
     const reasons: string[] = []
     let tier: EligibilityTier = 'not_eligible'
 
@@ -171,7 +174,7 @@ export function useEligibility() {
   /**
    * Check Boiler Upgrade Scheme eligibility
    */
-  function checkBoilerUpgradeScheme(answers: CheckerAnswers): SchemeEligibility {
+  function checkBoilerUpgradeScheme(answers: ReadonlyCheckerAnswers): SchemeEligibility {
     const reasons: string[] = []
     let tier: EligibilityTier = 'not_eligible'
 
@@ -213,7 +216,7 @@ export function useEligibility() {
   /**
    * Check LA Flex eligibility
    */
-  function checkLaFlex(answers: CheckerAnswers): SchemeEligibility {
+  function checkLaFlex(answers: ReadonlyCheckerAnswers): SchemeEligibility {
     const reasons: string[] = []
     let tier: EligibilityTier = 'not_eligible'
 
@@ -251,7 +254,7 @@ export function useEligibility() {
   /**
    * Evaluate eligibility for all schemes
    */
-  function evaluate(answers: CheckerAnswers): EligibilityResult {
+  function evaluate(answers: ReadonlyCheckerAnswers): EligibilityResult {
     const schemes: SchemeEligibility[] = [
       checkEco4(answers),
       checkGbis(answers),

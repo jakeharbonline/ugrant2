@@ -11,6 +11,9 @@ import type { Database, Json } from '~/types/database.types'
 type Lead = Database['public']['Tables']['leads']['Row']
 type LeadInsert = Database['public']['Tables']['leads']['Insert']
 
+// Accept both mutable and readonly versions
+type ReadonlyCheckerAnswers = Readonly<CheckerAnswers> | CheckerAnswers
+
 export interface LeadSubmissionResult {
   success: boolean
   leadId?: string
@@ -26,7 +29,7 @@ export function useLead() {
    * Create a new lead from checker answers and eligibility result
    */
   async function createLead(
-    answers: CheckerAnswers,
+    answers: ReadonlyCheckerAnswers,
     eligibility: EligibilityResult
   ): Promise<LeadSubmissionResult> {
     loading.value = true
