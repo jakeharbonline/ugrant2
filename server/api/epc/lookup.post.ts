@@ -86,26 +86,36 @@ export default defineEventHandler(async (event) => {
 
     // Map column names to indices for easier access
     const columns = response['column-names']
-    const getColumnIndex = (name: string) => columns.indexOf(name)
+    console.log('EPC API columns:', columns)
+
+    // Safe column getter - returns empty string if column not found
+    const getColumn = (row: string[], name: string): string => {
+      const index = columns.indexOf(name)
+      if (index === -1) {
+        console.warn(`Column '${name}' not found in EPC response`)
+        return ''
+      }
+      return row[index] || ''
+    }
 
     // Parse the results
     const certificates: EpcCertificate[] = response.rows.map((row) => ({
-      address: row[getColumnIndex('address')] || '',
-      postcode: row[getColumnIndex('postcode')] || '',
-      currentEnergyRating: row[getColumnIndex('current-energy-rating')] || '',
-      potentialEnergyRating: row[getColumnIndex('potential-energy-rating')] || '',
-      propertyType: row[getColumnIndex('property-type')] || '',
-      builtForm: row[getColumnIndex('built-form')] || '',
-      floorDescription: row[getColumnIndex('floor-description')] || '',
-      wallsDescription: row[getColumnIndex('walls-description')] || '',
-      roofDescription: row[getColumnIndex('roof-description')] || '',
-      windowsDescription: row[getColumnIndex('windows-description')] || '',
-      mainHeatDescription: row[getColumnIndex('mainheat-description')] || '',
-      mainFuel: row[getColumnIndex('main-fuel')] || '',
-      hotWaterDescription: row[getColumnIndex('hotwater-description')] || '',
-      floorArea: parseFloat(row[getColumnIndex('total-floor-area')] ?? '0') || 0,
-      lodgementDate: row[getColumnIndex('lodgement-date')] || '',
-      certificateHash: row[getColumnIndex('lmk-key')] || '',
+      address: getColumn(row, 'address'),
+      postcode: getColumn(row, 'postcode'),
+      currentEnergyRating: getColumn(row, 'current-energy-rating'),
+      potentialEnergyRating: getColumn(row, 'potential-energy-rating'),
+      propertyType: getColumn(row, 'property-type'),
+      builtForm: getColumn(row, 'built-form'),
+      floorDescription: getColumn(row, 'floor-description'),
+      wallsDescription: getColumn(row, 'walls-description'),
+      roofDescription: getColumn(row, 'roof-description'),
+      windowsDescription: getColumn(row, 'windows-description'),
+      mainHeatDescription: getColumn(row, 'mainheat-description'),
+      mainFuel: getColumn(row, 'main-fuel'),
+      hotWaterDescription: getColumn(row, 'hotwater-description'),
+      floorArea: parseFloat(getColumn(row, 'total-floor-area') || '0') || 0,
+      lodgementDate: getColumn(row, 'lodgement-date'),
+      certificateHash: getColumn(row, 'lmk-key'),
     }))
 
     // Sort by lodgement date (most recent first)
