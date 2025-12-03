@@ -80,12 +80,20 @@ export default defineEventHandler(async (event) => {
     )
 
     console.log('EPC API response received, rows:', response.rows?.length ?? 0)
+    console.log('Response keys:', Object.keys(response))
+    console.log('Response type:', typeof response)
 
     // Debug: Log the raw first row to see actual data structure
     if (response.rows && response.rows.length > 0) {
       console.log('First row length:', response.rows[0]?.length)
-      console.log('First row (first 10 elements):', response.rows[0]?.slice(0, 10))
+      console.log('First row type:', typeof response.rows[0])
+      console.log('First row is array:', Array.isArray(response.rows[0]))
+      console.log('First row (first 10 elements):', response.rows[0]?.slice?.(0, 10))
       console.log('First row (raw):', JSON.stringify(response.rows[0]))
+    } else if (Array.isArray(response) && response.length > 0) {
+      // Maybe the response IS the rows array (array of objects)?
+      console.log('Response appears to be array directly')
+      console.log('First item:', JSON.stringify(response[0]))
     }
 
     if (!response.rows || response.rows.length === 0) {
