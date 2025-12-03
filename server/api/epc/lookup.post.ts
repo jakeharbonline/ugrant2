@@ -104,24 +104,24 @@ export default defineEventHandler(async (event) => {
       return row[index] || ''
     }
 
-    // Parse the results - EPC API uses UPPERCASE column names with underscores
+    // Parse the results - EPC API uses lowercase column names with hyphens
     const certificates: EpcCertificate[] = response.rows.map((row) => ({
-      address: getColumn(row, 'ADDRESS'),
-      postcode: getColumn(row, 'POSTCODE'),
-      currentEnergyRating: getColumn(row, 'CURRENT_ENERGY_RATING'),
-      potentialEnergyRating: getColumn(row, 'POTENTIAL_ENERGY_RATING'),
-      propertyType: getColumn(row, 'PROPERTY_TYPE'),
-      builtForm: getColumn(row, 'BUILT_FORM'),
-      floorDescription: getColumn(row, 'FLOOR_DESCRIPTION'),
-      wallsDescription: getColumn(row, 'WALLS_DESCRIPTION'),
-      roofDescription: getColumn(row, 'ROOF_DESCRIPTION'),
-      windowsDescription: getColumn(row, 'WINDOWS_DESCRIPTION'),
-      mainHeatDescription: getColumn(row, 'MAINHEAT_DESCRIPTION'),
-      mainFuel: getColumn(row, 'MAIN_FUEL'),
-      hotWaterDescription: getColumn(row, 'HOTWATER_DESCRIPTION'),
-      floorArea: parseFloat(getColumn(row, 'TOTAL_FLOOR_AREA') || '0') || 0,
-      lodgementDate: getColumn(row, 'LODGEMENT_DATE'),
-      certificateHash: getColumn(row, 'LMK_KEY'),
+      address: getColumn(row, 'address'),
+      postcode: getColumn(row, 'postcode'),
+      currentEnergyRating: getColumn(row, 'current-energy-rating'),
+      potentialEnergyRating: getColumn(row, 'potential-energy-rating'),
+      propertyType: getColumn(row, 'property-type'),
+      builtForm: getColumn(row, 'built-form'),
+      floorDescription: getColumn(row, 'floor-description'),
+      wallsDescription: getColumn(row, 'walls-description'),
+      roofDescription: getColumn(row, 'roof-description'),
+      windowsDescription: getColumn(row, 'windows-description'),
+      mainHeatDescription: getColumn(row, 'mainheat-description'),
+      mainFuel: getColumn(row, 'main-fuel'),
+      hotWaterDescription: getColumn(row, 'hotwater-description'),
+      floorArea: parseFloat(getColumn(row, 'total-floor-area') || '0') || 0,
+      lodgementDate: getColumn(row, 'lodgement-date'),
+      certificateHash: getColumn(row, 'lmk-key'),
     }))
 
     // Sort by lodgement date (most recent first)
