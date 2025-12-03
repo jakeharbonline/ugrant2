@@ -124,6 +124,11 @@ export default defineEventHandler(async (event) => {
       certificateHash: getColumn(row, 'lmk-key'),
     }))
 
+    // Log first certificate to debug
+    if (certificates.length > 0) {
+      console.log('First certificate:', JSON.stringify(certificates[0], null, 2))
+    }
+
     // Sort by lodgement date (most recent first)
     certificates.sort((a, b) =>
       new Date(b.lodgementDate).getTime() - new Date(a.lodgementDate).getTime()

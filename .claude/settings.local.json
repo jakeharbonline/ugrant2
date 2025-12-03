@@ -28,7 +28,8 @@
       "mcp__supabase-mcp__list_projects",
       "mcp__supabase-mcp__apply_migration",
       "mcp__supabase-mcp__generate_typescript_types",
-      "mcp__vercel-mcp__get_deployment"
+      "mcp__vercel-mcp__get_deployment",
+      "WebFetch(domain:epc.opendatacommunities.org)"
     ],
     "deny": [],
     "ask": []

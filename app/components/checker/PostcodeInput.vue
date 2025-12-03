@@ -397,7 +397,7 @@ function clearSelection() {
                 EPC {{ cert.currentEnergyRating }}
               </span>
               <span>{{ cert.propertyType }}</span>
-              <span>{{ new Date(cert.lodgementDate).getFullYear() }}</span>
+              <span>{{ cert.lodgementDate ? new Date(cert.lodgementDate).getFullYear() : '' }}</span>
             </div>
           </button>
         </li>
