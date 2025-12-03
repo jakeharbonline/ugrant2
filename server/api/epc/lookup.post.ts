@@ -24,9 +24,10 @@ interface EpcCertificate {
   certificateHash: string
 }
 
+// Response could have rows as arrays (positional) or objects (keyed)
 interface EpcApiResponse {
-  'column-names': string[]
-  rows: string[][]
+  'column-names'?: string[]
+  rows: (string[] | Record<string, string>)[]
 }
 
 export default defineEventHandler(async (event) => {
@@ -105,51 +106,57 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // Map column names to indices for easier access
-    const columns = response['column-names']
-    console.log('EPC API columns count:', columns?.length)
-    console.log('Address column index:', columns?.indexOf('address'))
-    console.log('Current-energy-rating index:', columns?.indexOf('current-energy-rating'))
-    console.log('Postcode index:', columns?.indexOf('postcode'))
-    console.log('Property-type index:', columns?.indexOf('property-type'))
+    // Check if rows are arrays (positional) or objects (keyed)
+    const firstRow = response.rows[0]
+    const rowsAreObjects = firstRow && !Array.isArray(firstRow)
+    console.log('Rows are objects (keyed):', rowsAreObjects)
 
-    // Safe column getter - returns empty string if column not found
-    const getColumn = (row: string[], name: string): string => {
-      const index = columns.indexOf(name)
-      if (index === -1) {
-        console.warn(`Column '${name}' not found in EPC response`)
-        return ''
+    // Map column names to indices for easier access (only needed for array format)
+    const columns = response['column-names'] || []
+    console.log('EPC API columns count:', columns?.length)
+
+    // Flexible value getter that works with both array and object rows
+    const getValue = (row: string[] | Record<string, string>, name: string): string => {
+      if (rowsAreObjects) {
+        // Row is an object with string keys
+        const objRow = row as Record<string, string>
+        return objRow[name] || ''
+      } else {
+        // Row is an array, use column index
+        const index = columns.indexOf(name)
+        if (index === -1) {
+          console.warn(`Column '${name}' not found in EPC response`)
+          return ''
+        }
+        const arrRow = row as string[]
+        return arrRow[index] || ''
       }
-      return row[index] || ''
     }
 
-    // Debug: Check actual values at key indices for first row
-    if (response.rows[0]) {
-      const firstRow = response.rows[0]
-      const addressIdx = columns.indexOf('address')
-      const ratingIdx = columns.indexOf('current-energy-rating')
-      console.log('First row address value at index', addressIdx, ':', firstRow[addressIdx])
-      console.log('First row rating value at index', ratingIdx, ':', firstRow[ratingIdx])
+    // Debug: Check actual values
+    if (firstRow) {
+      console.log('Address value:', getValue(firstRow, 'address'))
+      console.log('Energy rating value:', getValue(firstRow, 'current-energy-rating'))
     }
 
     // Parse the results - EPC API uses lowercase column names with hyphens
     const certificates: EpcCertificate[] = response.rows.map((row) => ({
-      address: getColumn(row, 'address'),
-      postcode: getColumn(row, 'postcode'),
-      currentEnergyRating: getColumn(row, 'current-energy-rating'),
-      potentialEnergyRating: getColumn(row, 'potential-energy-rating'),
-      propertyType: getColumn(row, 'property-type'),
-      builtForm: getColumn(row, 'built-form'),
-      floorDescription: getColumn(row, 'floor-description'),
-      wallsDescription: getColumn(row, 'walls-description'),
-      roofDescription: getColumn(row, 'roof-description'),
-      windowsDescription: getColumn(row, 'windows-description'),
-      mainHeatDescription: getColumn(row, 'mainheat-description'),
-      mainFuel: getColumn(row, 'main-fuel'),
-      hotWaterDescription: getColumn(row, 'hotwater-description'),
-      floorArea: parseFloat(getColumn(row, 'total-floor-area') || '0') || 0,
-      lodgementDate: getColumn(row, 'lodgement-date'),
-      certificateHash: getColumn(row, 'lmk-key'),
+      address: getValue(row, 'address'),
+      postcode: getValue(row, 'postcode'),
+      currentEnergyRating: getValue(row, 'current-energy-rating'),
+      potentialEnergyRating: getValue(row, 'potential-energy-rating'),
+      propertyType: getValue(row, 'property-type'),
+      builtForm: getValue(row, 'built-form'),
+      floorDescription: getValue(row, 'floor-description'),
+      wallsDescription: getValue(row, 'walls-description'),
+      roofDescription: getValue(row, 'roof-description'),
+      windowsDescription: getValue(row, 'windows-description'),
+      mainHeatDescription: getValue(row, 'mainheat-description'),
+      mainFuel: getValue(row, 'main-fuel'),
+      hotWaterDescription: getValue(row, 'hotwater-description'),
+      floorArea: parseFloat(getValue(row, 'total-floor-area') || '0') || 0,
+      lodgementDate: getValue(row, 'lodgement-date'),
+      certificateHash: getValue(row, 'lmk-key'),
     }))
 
     // Log first certificate to debug
