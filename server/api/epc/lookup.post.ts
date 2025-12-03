@@ -60,6 +60,10 @@ export default defineEventHandler(async (event) => {
     // Query the EPC API
     // API docs: https://epc.opendatacommunities.org/docs/api
     // Uses Basic Auth with email:apikey format
+    console.log('EPC API request for postcode:', cleanPostcode)
+    console.log('Using API email:', apiEmail ? apiEmail.substring(0, 5) + '...' : 'NOT SET')
+    console.log('Using API key:', apiKey ? 'SET (' + apiKey.length + ' chars)' : 'NOT SET')
+
     const response = await $fetch<EpcApiResponse>(
       `https://epc.opendatacommunities.org/api/v1/domestic/search`,
       {
@@ -74,6 +78,8 @@ export default defineEventHandler(async (event) => {
         },
       }
     )
+
+    console.log('EPC API response received, rows:', response.rows?.length ?? 0)
 
     if (!response.rows || response.rows.length === 0) {
       return {
@@ -132,6 +138,14 @@ export default defineEventHandler(async (event) => {
   } catch (error: unknown) {
     console.error('EPC API error:', error)
 
+    // Log more details about the error
+    if (error && typeof error === 'object') {
+      console.error('Error details:', JSON.stringify(error, null, 2))
+      if ('data' in error) console.error('Error data:', error.data)
+      if ('statusCode' in error) console.error('Status code:', error.statusCode)
+      if ('message' in error) console.error('Error message:', error.message)
+    }
+
     // Check if it's a 404 (no results)
     if (error && typeof error === 'object' && 'statusCode' in error && error.statusCode === 404) {
       return {
@@ -139,6 +153,17 @@ export default defineEventHandler(async (event) => {
         found: false,
         message: 'No EPC records found for this postcode',
         certificates: [],
+      }
+    }
+
+    // Check for 401/403 auth errors
+    if (error && typeof error === 'object' && 'statusCode' in error) {
+      const statusCode = error.statusCode as number
+      if (statusCode === 401 || statusCode === 403) {
+        throw createError({
+          statusCode: 503,
+          message: 'EPC API authentication failed - check credentials',
+        })
       }
     }
 
