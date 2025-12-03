@@ -81,6 +81,13 @@ export default defineEventHandler(async (event) => {
 
     console.log('EPC API response received, rows:', response.rows?.length ?? 0)
 
+    // Debug: Log the raw first row to see actual data structure
+    if (response.rows && response.rows.length > 0) {
+      console.log('First row length:', response.rows[0]?.length)
+      console.log('First row (first 10 elements):', response.rows[0]?.slice(0, 10))
+      console.log('First row (raw):', JSON.stringify(response.rows[0]))
+    }
+
     if (!response.rows || response.rows.length === 0) {
       return {
         success: true,
@@ -92,7 +99,11 @@ export default defineEventHandler(async (event) => {
 
     // Map column names to indices for easier access
     const columns = response['column-names']
-    console.log('EPC API columns:', columns)
+    console.log('EPC API columns count:', columns?.length)
+    console.log('Address column index:', columns?.indexOf('address'))
+    console.log('Current-energy-rating index:', columns?.indexOf('current-energy-rating'))
+    console.log('Postcode index:', columns?.indexOf('postcode'))
+    console.log('Property-type index:', columns?.indexOf('property-type'))
 
     // Safe column getter - returns empty string if column not found
     const getColumn = (row: string[], name: string): string => {
@@ -102,6 +113,15 @@ export default defineEventHandler(async (event) => {
         return ''
       }
       return row[index] || ''
+    }
+
+    // Debug: Check actual values at key indices for first row
+    if (response.rows[0]) {
+      const firstRow = response.rows[0]
+      const addressIdx = columns.indexOf('address')
+      const ratingIdx = columns.indexOf('current-energy-rating')
+      console.log('First row address value at index', addressIdx, ':', firstRow[addressIdx])
+      console.log('First row rating value at index', ratingIdx, ':', firstRow[ratingIdx])
     }
 
     // Parse the results - EPC API uses lowercase column names with hyphens
