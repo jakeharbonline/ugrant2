@@ -75,7 +75,7 @@ export default defineEventHandler(async (event) => {
         },
         query: {
           postcode: cleanPostcode,
-          size: 10, // Get up to 10 results for the postcode
+          size: 100, // Get all results for the postcode
         },
       }
     )
