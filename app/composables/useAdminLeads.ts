@@ -4,7 +4,36 @@
 import { ref, readonly, computed } from 'vue'
 import type { Database } from '~/types/database.types'
 
-type Lead = Database['public']['Tables']['leads']['Row']
+// Simplified Lead type to avoid deep type instantiation
+// Using Record<string, unknown> instead of Json to prevent recursive type issues
+export interface Lead {
+  id: string
+  email: string | null
+  phone: string | null
+  postcode: string
+  property_type: string
+  tenure: string
+  heating_type: string
+  insulation: string[] | null
+  benefits: string[] | null
+  income_band: string | null
+  epc_rating: string | null
+  epc_data: Record<string, unknown> | null
+  eligibility_tier: 'eligible' | 'potentially_eligible' | 'not_eligible'
+  eligible_schemes: string[] | null
+  eligibility_details: Record<string, unknown> | null
+  status: 'new' | 'sent' | 'purchased' | 'resent' | 'archived' | 'deleted'
+  price: number | null
+  notes: string | null
+  wants_installer_contact: boolean
+  accepted_terms: boolean
+  accepted_privacy: boolean
+  consent_timestamp: string | null
+  created_at: string
+  updated_at: string
+  deleted_at: string | null
+}
+
 type LeadStatus = Database['public']['Enums']['lead_status']
 type EligibilityTier = Database['public']['Enums']['eligibility_tier']
 
@@ -29,7 +58,8 @@ export interface LeadStats {
 }
 
 export function useAdminLeads() {
-  const supabase = useSupabaseClient<Database>()
+  // Use untyped client to avoid deep type instantiation issues
+  const supabase = useSupabaseClient()
 
   const leads = ref<Lead[]>([])
   const loading = ref(false)
@@ -88,7 +118,7 @@ export function useAdminLeads() {
         throw fetchError
       }
 
-      leads.value = data || []
+      leads.value = (data as Lead[]) || []
       totalCount.value = count || 0
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to fetch leads'
@@ -114,7 +144,7 @@ export function useAdminLeads() {
       return null
     }
 
-    return data
+    return data as Lead
   }
 
   /**
@@ -132,9 +162,9 @@ export function useAdminLeads() {
     }
 
     // Update local state
-    const lead = leads.value.find(l => l.id === id)
-    if (lead) {
-      lead.status = status
+    const idx = leads.value.findIndex(l => l.id === id)
+    if (idx !== -1) {
+      leads.value[idx]!.status = status
     }
 
     return true
@@ -146,7 +176,7 @@ export function useAdminLeads() {
   async function updatePrice(id: string, price: number): Promise<boolean> {
     const { error: updateError } = await supabase
       .from('leads')
-      .update({ price, updated_at: new Date().toISOString() })
+      .update({ price, updated_at: new Date().toISOString() } as any)
       .eq('id', id)
 
     if (updateError) {
@@ -154,9 +184,9 @@ export function useAdminLeads() {
       return false
     }
 
-    const lead = leads.value.find(l => l.id === id)
-    if (lead) {
-      lead.price = price
+    const idx = leads.value.findIndex(l => l.id === id)
+    if (idx !== -1) {
+      leads.value[idx]!.price = price
     }
 
     return true
@@ -211,7 +241,10 @@ export function useAdminLeads() {
     }
 
     // Remove from local state
-    leads.value = leads.value.filter(l => l.id !== id)
+    const idx = leads.value.findIndex(l => l.id === id)
+    if (idx !== -1) {
+      leads.value.splice(idx, 1)
+    }
     totalCount.value--
 
     return true
@@ -270,8 +303,11 @@ export function useAdminLeads() {
     }
   }
 
+  // Use computed to avoid deep readonly type issues with Supabase types
+  const leadsReadonly = computed(() => leads.value)
+
   return {
-    leads: readonly(leads),
+    leads: leadsReadonly,
     loading: readonly(loading),
     error: readonly(error),
     totalCount: readonly(totalCount),

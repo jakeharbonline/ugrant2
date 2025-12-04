@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import type { Lead } from '~/composables/useAdminLeads'
 import type { Database } from '~/types/database.types'
 
-type Lead = Database['public']['Tables']['leads']['Row']
 type LeadStatus = Database['public']['Enums']['lead_status']
 
 definePageMeta({
