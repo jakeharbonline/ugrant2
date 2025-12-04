@@ -37,16 +37,16 @@ export function useEpcLookup() {
   const result = ref<EpcLookupResult | null>(null)
 
   /**
-   * Look up EPC data for a postcode
+   * Look up EPC data for a specific property
    */
-  async function lookup(postcode: string): Promise<EpcLookupResult> {
+  async function lookup(postcode: string, houseNumber?: string): Promise<EpcLookupResult> {
     loading.value = true
     error.value = null
 
     try {
       const response = await $fetch<EpcLookupResult>('/api/epc/lookup', {
         method: 'POST',
-        body: { postcode },
+        body: { postcode, houseNumber },
       })
 
       result.value = response

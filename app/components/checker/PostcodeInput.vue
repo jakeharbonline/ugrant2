@@ -168,7 +168,8 @@ async function handleLookup() {
   lookupStatus.value = 'loading'
   matchedCertificate.value = null
 
-  const result = await lookup(localPostcode.value)
+  // Query API with both postcode and house number for exact match
+  const result = await lookup(localPostcode.value, localHouseNumber.value)
 
   if (!result.success) {
     lookupStatus.value = 'error'
@@ -178,30 +179,29 @@ async function handleLookup() {
 
   if (!result.found || result.certificates.length === 0) {
     lookupStatus.value = 'not-found'
-    lookupError.value = 'No EPC records found. You can still continue manually.'
+    lookupError.value = 'No EPC records found for this property. You can still continue manually.'
     return
   }
 
   certificates.value = result.certificates
 
-  // Try to find exact match
-  const match = findBestMatch(result.certificates, localHouseNumber.value)
-
-  if (match) {
-    // Found exact match - auto-select it
+  // If only one result, auto-select it (API already filtered by address)
+  if (result.certificates.length === 1 && result.certificates[0]) {
     lookupStatus.value = 'success'
-    matchedCertificate.value = match
-    emit('epc-selected', match)
-  } else if (result.certificates.length === 1 && result.certificates[0]) {
-    // Only one result - use it
-    const cert = result.certificates[0]
-    lookupStatus.value = 'success'
-    matchedCertificate.value = cert
-    emit('epc-selected', cert)
-  } else {
-    // Multiple results, no exact match - show selector
-    lookupStatus.value = 'success'
-    showAddressSelector.value = true
+    matchedCertificate.value = result.certificates[0]
+    emit('epc-selected', result.certificates[0])
+  } else if (result.certificates.length > 1) {
+    // Multiple results returned - try to find best match client-side
+    const match = findBestMatch(result.certificates, localHouseNumber.value)
+    if (match) {
+      lookupStatus.value = 'success'
+      matchedCertificate.value = match
+      emit('epc-selected', match)
+    } else {
+      // No exact match - show selector for user to choose
+      lookupStatus.value = 'success'
+      showAddressSelector.value = true
+    }
   }
 }
 

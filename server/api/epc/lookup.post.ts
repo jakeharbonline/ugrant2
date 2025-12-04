@@ -32,7 +32,7 @@ interface EpcApiResponse {
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
-  const { postcode } = body
+  const { postcode, houseNumber } = body
 
   if (!postcode) {
     throw createError({
@@ -43,6 +43,7 @@ export default defineEventHandler(async (event) => {
 
   // Clean and format postcode
   const cleanPostcode = postcode.replace(/\s+/g, '').toUpperCase()
+  const cleanHouseNumber = houseNumber?.trim() || ''
 
   // Get API credentials from environment
   const config = useRuntimeConfig()
@@ -75,7 +76,8 @@ export default defineEventHandler(async (event) => {
         },
         query: {
           postcode: cleanPostcode,
-          size: 100, // Get all results for the postcode
+          address: cleanHouseNumber, // Filter by house number/name
+          size: 5, // Only need a few results when filtering by address
         },
       }
     )
