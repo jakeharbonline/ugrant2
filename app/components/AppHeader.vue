@@ -69,7 +69,7 @@ function closeMobileMenu() {
         <!-- CTA Button (Desktop) -->
         <div class="hidden lg:block">
           <NuxtLink
-            to="/eligibility"
+            to="/checker"
             class="inline-flex items-center px-5 py-2.5 bg-primary-700 text-white font-semibold rounded-lg hover:bg-primary-800 transition-colors focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
           >
             Check Eligibility
@@ -144,7 +144,7 @@ function closeMobileMenu() {
               {{ item.name }}
             </NuxtLink>
             <NuxtLink
-              to="/eligibility"
+              to="/checker"
               class="mt-2 mx-4 text-center py-3 bg-primary-700 text-white font-semibold rounded-lg hover:bg-primary-800 transition-colors"
               @click="closeMobileMenu"
             >
