@@ -88,43 +88,68 @@ const canLookup = computed(() => {
 function findBestMatch(certs: EpcCertificate[], houseNum: string): EpcCertificate | null {
   const searchTerm = houseNum.toLowerCase().trim()
 
+  // Debug logging
+  console.log('Finding match for house number:', searchTerm)
+  console.log('Available addresses:', certs.map(c => c.address))
+
   // Escape special regex characters
   const escapedTerm = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
-  // Create regex that matches the house number as a word boundary
-  // This handles: "42 HIGH ST", "42, HIGH ST", "FLAT 1, 42 HIGH ST", etc.
-  const regex = new RegExp(`(^|[,\\s])${escapedTerm}([,\\s]|$)`, 'i')
-
-  // First pass: find addresses containing the house number
-  const matches = certs.filter(cert => regex.test(cert.address))
-
-  if (matches.length === 1 && matches[0]) {
-    return matches[0]
-  }
-
-  if (matches.length > 1) {
-    // Multiple matches - try to find best one
-    // Prefer addresses that START with the house number
-    for (const cert of matches) {
-      const address = cert.address.toLowerCase()
-      if (address.startsWith(searchTerm + ' ') ||
-          address.startsWith(searchTerm + ',')) {
-        return cert
-      }
-    }
-    // Return first match if no better option
-    return matches[0] ?? null
-  }
-
-  // No regex matches - try exact word match in parts
+  // Strategy 1: Address starts with the house number
   for (const cert of certs) {
     const address = cert.address.toLowerCase()
-    const parts = address.split(/[\s,]+/)
-    if (parts.includes(searchTerm)) {
+    if (address.startsWith(searchTerm + ' ') ||
+        address.startsWith(searchTerm + ',') ||
+        address.startsWith(searchTerm + '.')) {
+      console.log('Match found (starts with):', cert.address)
       return cert
     }
   }
 
+  // Strategy 2: House number appears as a distinct word/token
+  const wordBoundaryRegex = new RegExp(`(^|[,\\s.])${escapedTerm}([,\\s.]|$)`, 'i')
+  const wordMatches = certs.filter(cert => wordBoundaryRegex.test(cert.address))
+
+  if (wordMatches.length === 1 && wordMatches[0]) {
+    console.log('Match found (word boundary):', wordMatches[0].address)
+    return wordMatches[0]
+  }
+
+  if (wordMatches.length > 1) {
+    // Multiple matches - prefer ones where number is near the start
+    for (const cert of wordMatches) {
+      const address = cert.address.toLowerCase()
+      // Check if number appears in first 20 characters
+      const firstPart = address.substring(0, 20)
+      if (firstPart.includes(searchTerm)) {
+        console.log('Match found (early position):', cert.address)
+        return cert
+      }
+    }
+    console.log('Multiple matches, returning first:', wordMatches[0]?.address)
+    return wordMatches[0] ?? null
+  }
+
+  // Strategy 3: Split address into parts and find exact match
+  for (const cert of certs) {
+    const address = cert.address.toLowerCase()
+    const parts = address.split(/[\s,.-]+/)
+    if (parts.includes(searchTerm)) {
+      console.log('Match found (split parts):', cert.address)
+      return cert
+    }
+  }
+
+  // Strategy 4: Looser match - number appears anywhere with word boundaries
+  const looseRegex = new RegExp(`\\b${escapedTerm}\\b`, 'i')
+  for (const cert of certs) {
+    if (looseRegex.test(cert.address)) {
+      console.log('Match found (loose):', cert.address)
+      return cert
+    }
+  }
+
+  console.log('No match found for:', searchTerm)
   return null
 }
 
