@@ -6,6 +6,7 @@ type LeadStatus = Database['public']['Enums']['lead_status']
 
 definePageMeta({
   layout: 'admin',
+  middleware: ['admin-auth'],
 })
 
 const route = useRoute()

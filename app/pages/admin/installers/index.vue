@@ -1,60 +1,46 @@
 <script setup lang="ts">
-import type { Database } from '~/types/database.types'
-
-type LeadStatus = Database['public']['Enums']['lead_status']
-type EligibilityTier = Database['public']['Enums']['eligibility_tier']
-
 definePageMeta({
   layout: 'admin',
   middleware: ['admin-auth'],
 })
 
 useHead({
-  title: 'Leads - uGrant Admin',
+  title: 'Installers - uGrant Admin',
 })
 
-const route = useRoute()
-const router = useRouter()
+const { installers, loading, error, totalCount, fetchInstallers, toggleActive, deleteInstaller } = useAdminInstallers()
 
-const { leads, loading, error, totalCount, fetchLeads, deleteLead } = useAdminLeads()
-
-// Filters from query params
+// Filters
 const filters = reactive({
-  status: (route.query.status as LeadStatus | 'all') || 'all',
-  eligibilityTier: (route.query.tier as EligibilityTier | 'all') || 'all',
-  search: (route.query.search as string) || '',
+  active: 'all' as boolean | 'all',
+  search: '',
 })
 
-const currentPage = ref(Number(route.query.page) || 1)
+const currentPage = ref(1)
 const perPage = 20
 
-// Fetch leads on mount and when filters change
-async function loadLeads() {
-  await fetchLeads(filters, currentPage.value, perPage)
+// Fetch installers on mount and when filters change
+async function loadInstallers() {
+  await fetchInstallers(filters, currentPage.value, perPage)
 }
 
-onMounted(loadLeads)
+onMounted(loadInstallers)
 
-watch([filters, currentPage], () => {
-  // Update URL
-  router.replace({
-    query: {
-      ...(filters.status !== 'all' && { status: filters.status }),
-      ...(filters.eligibilityTier !== 'all' && { tier: filters.eligibilityTier }),
-      ...(filters.search && { search: filters.search }),
-      ...(currentPage.value > 1 && { page: currentPage.value }),
-    },
-  })
-  loadLeads()
-}, { deep: true })
+watch([filters, currentPage], loadInstallers, { deep: true })
 
 // Delete confirmation
 const deleteConfirmId = ref<string | null>(null)
 
 async function confirmDelete(id: string) {
-  if (await deleteLead(id)) {
+  if (await deleteInstaller(id)) {
     deleteConfirmId.value = null
   }
+}
+
+// Toggle active status
+async function handleToggleActive(id: string, currentStatus: boolean) {
+  await toggleActive(id, !currentStatus)
+  await loadInstallers()
 }
 
 // Format helpers
@@ -63,39 +49,14 @@ function formatDate(date: string) {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
   })
 }
 
-function getStatusBadgeClass(status: LeadStatus) {
-  const classes: Record<LeadStatus, string> = {
-    new: 'bg-green-100 text-green-800',
-    sent: 'bg-amber-100 text-amber-800',
-    purchased: 'bg-blue-100 text-blue-800',
-    resent: 'bg-purple-100 text-purple-800',
-    archived: 'bg-neutral-100 text-neutral-800',
-    deleted: 'bg-red-100 text-red-800',
-  }
-  return classes[status] || 'bg-neutral-100 text-neutral-800'
-}
-
-function getTierBadgeClass(tier: EligibilityTier) {
-  const classes: Record<EligibilityTier, string> = {
-    eligible: 'bg-green-100 text-green-800',
-    potentially_eligible: 'bg-amber-100 text-amber-800',
-    not_eligible: 'bg-neutral-100 text-neutral-600',
-  }
-  return classes[tier] || 'bg-neutral-100 text-neutral-600'
-}
-
-function formatTier(tier: EligibilityTier) {
-  const labels: Record<EligibilityTier, string> = {
-    eligible: 'Eligible',
-    potentially_eligible: 'Potential',
-    not_eligible: 'Not Eligible',
-  }
-  return labels[tier] || tier
+function formatCurrency(amount: number) {
+  return new Intl.NumberFormat('en-GB', {
+    style: 'currency',
+    currency: 'GBP',
+  }).format(amount)
 }
 
 const totalPages = computed(() => Math.ceil(totalCount.value / perPage))
@@ -105,14 +66,23 @@ const totalPages = computed(() => Math.ceil(totalCount.value / perPage))
   <div>
     <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-neutral-900">Leads</h1>
-        <p class="text-neutral-600 mt-1">Manage and track all leads</p>
+        <h1 class="text-2xl font-bold text-neutral-900">Installers</h1>
+        <p class="text-neutral-600 mt-1">Manage installer accounts and settings</p>
       </div>
+      <NuxtLink
+        to="/admin/installers/new"
+        class="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors"
+      >
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+        </svg>
+        Add Installer
+      </NuxtLink>
     </div>
 
     <!-- Filters -->
     <div class="bg-white rounded-xl p-4 shadow-sm border border-neutral-200 mb-6">
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <!-- Search -->
         <div>
           <label for="search" class="block text-sm font-medium text-neutral-700 mb-1">Search</label>
@@ -120,7 +90,7 @@ const totalPages = computed(() => Math.ceil(totalCount.value / perPage))
             id="search"
             v-model="filters.search"
             type="text"
-            placeholder="Postcode, email, phone..."
+            placeholder="Name, company, email..."
             class="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
           />
         </div>
@@ -130,39 +100,20 @@ const totalPages = computed(() => Math.ceil(totalCount.value / perPage))
           <label for="status" class="block text-sm font-medium text-neutral-700 mb-1">Status</label>
           <select
             id="status"
-            v-model="filters.status"
+            v-model="filters.active"
             class="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
           >
-            <option value="all">All Statuses</option>
-            <option value="new">New</option>
-            <option value="sent">Sent</option>
-            <option value="purchased">Purchased</option>
-            <option value="resent">Resent</option>
-            <option value="archived">Archived</option>
-            <option value="deleted">Deleted</option>
-          </select>
-        </div>
-
-        <!-- Eligibility filter -->
-        <div>
-          <label for="tier" class="block text-sm font-medium text-neutral-700 mb-1">Eligibility</label>
-          <select
-            id="tier"
-            v-model="filters.eligibilityTier"
-            class="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-          >
-            <option value="all">All Tiers</option>
-            <option value="eligible">Eligible</option>
-            <option value="potentially_eligible">Potentially Eligible</option>
-            <option value="not_eligible">Not Eligible</option>
+            <option value="all">All</option>
+            <option :value="true">Active</option>
+            <option :value="false">Inactive</option>
           </select>
         </div>
 
         <!-- Results count -->
         <div class="flex items-end">
           <p class="text-sm text-neutral-600">
-            Showing <span class="font-medium">{{ leads.length }}</span> of
-            <span class="font-medium">{{ totalCount }}</span> leads
+            Showing <span class="font-medium">{{ installers.length }}</span> of
+            <span class="font-medium">{{ totalCount }}</span> installers
           </p>
         </div>
       </div>
@@ -180,39 +131,45 @@ const totalPages = computed(() => Math.ceil(totalCount.value / perPage))
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
         </svg>
-        <span class="ml-3 text-neutral-600">Loading leads...</span>
+        <span class="ml-3 text-neutral-600">Loading installers...</span>
       </div>
     </div>
 
     <!-- Empty state -->
-    <div v-else-if="leads.length === 0" class="bg-white rounded-xl shadow-sm border border-neutral-200 p-8 text-center">
+    <div v-else-if="installers.length === 0" class="bg-white rounded-xl shadow-sm border border-neutral-200 p-8 text-center">
       <svg class="w-12 h-12 text-neutral-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
       </svg>
-      <h3 class="text-lg font-medium text-neutral-900 mb-1">No leads found</h3>
-      <p class="text-neutral-600">Try adjusting your filters or check back later.</p>
+      <h3 class="text-lg font-medium text-neutral-900 mb-1">No installers found</h3>
+      <p class="text-neutral-600 mb-4">Get started by adding your first installer.</p>
+      <NuxtLink
+        to="/admin/installers/new"
+        class="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors"
+      >
+        Add Installer
+      </NuxtLink>
     </div>
 
-    <!-- Leads table -->
+    <!-- Installers table -->
     <div v-else class="bg-white rounded-xl shadow-sm border border-neutral-200 overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full">
           <thead class="bg-neutral-50 border-b border-neutral-200">
             <tr>
               <th class="px-4 py-3 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">
+                Installer
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">
                 Contact
               </th>
               <th class="px-4 py-3 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">
-                Property
+                Lead Price
               </th>
               <th class="px-4 py-3 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">
-                Eligibility
+                Stats
               </th>
               <th class="px-4 py-3 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">
                 Status
-              </th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">
-                Created
               </th>
               <th class="px-4 py-3 text-right text-xs font-semibold text-neutral-600 uppercase tracking-wider">
                 Actions
@@ -221,77 +178,89 @@ const totalPages = computed(() => Math.ceil(totalCount.value / perPage))
           </thead>
           <tbody class="divide-y divide-neutral-100">
             <tr
-              v-for="lead in leads"
-              :key="lead.id"
+              v-for="installer in installers"
+              :key="installer.id"
               class="hover:bg-neutral-50 transition-colors"
             >
+              <!-- Installer -->
+              <td class="px-4 py-4">
+                <div>
+                  <p class="font-medium text-neutral-900">{{ installer.name }}</p>
+                  <p v-if="installer.company_name" class="text-sm text-neutral-500">{{ installer.company_name }}</p>
+                </div>
+              </td>
+
               <!-- Contact -->
               <td class="px-4 py-4">
                 <div class="text-sm">
-                  <p class="font-medium text-neutral-900">{{ lead.email || 'No email' }}</p>
-                  <p class="text-neutral-500">{{ lead.phone || 'No phone' }}</p>
+                  <p class="text-neutral-900">{{ installer.email }}</p>
+                  <p v-if="installer.phone" class="text-neutral-500">{{ installer.phone }}</p>
                 </div>
               </td>
 
-              <!-- Property -->
+              <!-- Lead Price -->
+              <td class="px-4 py-4">
+                <span class="font-medium text-neutral-900">{{ formatCurrency(installer.default_lead_price) }}</span>
+              </td>
+
+              <!-- Stats -->
               <td class="px-4 py-4">
                 <div class="text-sm">
-                  <p class="font-medium text-neutral-900">{{ lead.postcode }}</p>
-                  <p class="text-neutral-500 capitalize">{{ lead.property_type?.replace(/-/g, ' ') }}</p>
+                  <p class="text-neutral-900">{{ installer.total_leads_purchased }} leads</p>
+                  <p class="text-neutral-500">{{ formatCurrency(installer.total_spent) }} spent</p>
                 </div>
-              </td>
-
-              <!-- Eligibility -->
-              <td class="px-4 py-4">
-                <span
-                  :class="[
-                    'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
-                    getTierBadgeClass(lead.eligibility_tier)
-                  ]"
-                >
-                  {{ formatTier(lead.eligibility_tier) }}
-                </span>
-                <p v-if="lead.eligible_schemes?.length" class="text-xs text-neutral-500 mt-1">
-                  {{ lead.eligible_schemes.length }} scheme(s)
-                </p>
               </td>
 
               <!-- Status -->
               <td class="px-4 py-4">
-                <span
-                  :class="[
-                    'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize',
-                    getStatusBadgeClass(lead.status)
-                  ]"
-                >
-                  {{ lead.status }}
-                </span>
-              </td>
-
-              <!-- Created -->
-              <td class="px-4 py-4 text-sm text-neutral-600">
-                {{ formatDate(lead.created_at) }}
+                <div class="flex flex-col gap-1">
+                  <span
+                    :class="[
+                      'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium w-fit',
+                      installer.active ? 'bg-green-100 text-green-800' : 'bg-neutral-100 text-neutral-600'
+                    ]"
+                  >
+                    {{ installer.active ? 'Active' : 'Inactive' }}
+                  </span>
+                  <span
+                    v-if="installer.verified"
+                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 w-fit"
+                  >
+                    Verified
+                  </span>
+                </div>
               </td>
 
               <!-- Actions -->
               <td class="px-4 py-4 text-right">
                 <div class="flex items-center justify-end gap-2">
                   <NuxtLink
-                    :to="`/admin/leads/${lead.id}`"
+                    :to="`/admin/installers/${installer.id}`"
                     class="p-2 text-neutral-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
-                    title="View details"
+                    title="Edit"
                   >
                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                     </svg>
                   </NuxtLink>
                   <button
-                    v-if="lead.status !== 'deleted'"
+                    type="button"
+                    class="p-2 text-neutral-600 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                    :title="installer.active ? 'Deactivate' : 'Activate'"
+                    @click="handleToggleActive(installer.id, installer.active)"
+                  >
+                    <svg v-if="installer.active" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                    </svg>
+                    <svg v-else class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </button>
+                  <button
                     type="button"
                     class="p-2 text-neutral-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                     title="Delete"
-                    @click="deleteConfirmId = lead.id"
+                    @click="deleteConfirmId = installer.id"
                   >
                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -344,9 +313,9 @@ const totalPages = computed(() => Math.ceil(totalCount.value / perPage))
           @click.self="deleteConfirmId = null"
         >
           <div class="bg-white rounded-xl p-6 max-w-md w-full shadow-xl">
-            <h3 class="text-lg font-semibold text-neutral-900 mb-2">Delete Lead?</h3>
+            <h3 class="text-lg font-semibold text-neutral-900 mb-2">Delete Installer?</h3>
             <p class="text-neutral-600 mb-6">
-              This will soft-delete the lead. You can restore it later if needed.
+              This will permanently delete the installer. This action cannot be undone.
             </p>
             <div class="flex justify-end gap-3">
               <button

@@ -1,5 +1,8 @@
 <script setup lang="ts">
 const route = useRoute()
+const router = useRouter()
+const supabase = useSupabaseClient()
+const user = useSupabaseUser()
 
 const navigation = [
   { name: 'Dashboard', href: '/admin', icon: 'chart-bar' },
@@ -10,12 +13,25 @@ const navigation = [
 ]
 
 const isSidebarOpen = ref(false)
+const loggingOut = ref(false)
 
 function isActive(href: string) {
   if (href === '/admin') {
     return route.path === '/admin'
   }
   return route.path.startsWith(href)
+}
+
+// Get user initials for avatar
+const userInitials = computed(() => {
+  if (!user.value?.email) return 'A'
+  return user.value.email.charAt(0).toUpperCase()
+})
+
+async function handleLogout() {
+  loggingOut.value = true
+  await supabase.auth.signOut()
+  router.push('/admin/login')
 }
 </script>
 
@@ -123,12 +139,20 @@ function isActive(href: string) {
 
         <div class="flex-1" />
 
-        <!-- User menu placeholder -->
+        <!-- User menu -->
         <div class="flex items-center gap-4">
-          <span class="text-sm text-neutral-600">Admin</span>
+          <span class="text-sm text-neutral-600 hidden sm:inline">{{ user?.email }}</span>
           <div class="w-8 h-8 bg-primary-100 text-primary-700 rounded-full flex items-center justify-center font-semibold text-sm">
-            A
+            {{ userInitials }}
           </div>
+          <button
+            type="button"
+            :disabled="loggingOut"
+            class="text-sm text-neutral-600 hover:text-neutral-900 disabled:opacity-50"
+            @click="handleLogout"
+          >
+            {{ loggingOut ? 'Signing out...' : 'Sign out' }}
+          </button>
         </div>
       </header>
 
